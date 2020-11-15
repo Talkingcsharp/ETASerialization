@@ -40,6 +40,7 @@ namespace JsonHashing.WebApi
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "My API", Version = "v1" });
             });
             services.AddScoped<Serializer>();
+            services.AddScoped<Hasher>();
             services.AddControllers();
         }
 
