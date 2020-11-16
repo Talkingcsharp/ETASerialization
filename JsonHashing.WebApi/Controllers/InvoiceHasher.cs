@@ -48,7 +48,13 @@ namespace JsonHashing.WebApi.Controllers
             using (StreamReader sr = new StreamReader(Request.Body))
             {
                 string requestbody = await sr.ReadToEndAsync();
-                JObject request = JsonConvert.DeserializeObject<JObject>(requestbody);
+                JObject request = JsonConvert.DeserializeObject<JObject>(requestbody,new JsonSerializerSettings()
+                {
+                      FloatFormatHandling = FloatFormatHandling.String,
+                       FloatParseHandling = FloatParseHandling.Decimal,
+                       DateFormatHandling= DateFormatHandling.IsoDateFormat,
+                        DateParseHandling = DateParseHandling.None
+                });
                 var h = _serializer.Serialize(request);
                 return h;
             };
@@ -60,12 +66,13 @@ namespace JsonHashing.WebApi.Controllers
             using (StreamReader sr = new StreamReader(Request.Body))
             {
                 string requestbody = await sr.ReadToEndAsync();
-                var hashed = _hasher.Hash(requestbody);
-
+                //var hashed = _hasher.Hash(requestbody);
 
                 return Ok(SignWithCMS(Encoding.UTF8.GetBytes(requestbody)));
             };
         }
+
+
 
         private string SignWithCMS(byte[] data)
         {

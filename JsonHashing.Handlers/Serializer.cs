@@ -42,20 +42,8 @@ namespace JsonHashing.Handlers
                             serialized += SerializeToken(property);
                         }
                         if (property.Type == JTokenType.Boolean || property.Type == JTokenType.Integer || property.Type == JTokenType.Float || property.Type == JTokenType.String || property.Type == JTokenType.Date)
-                        {
-                            if (property.Type == JTokenType.Date)
-                            {
-                                serialized += "\"" + property.Value<DateTime>().ToString("yyyy-MM-ddTHH:mm:ssZ") + "\"";
-                            }
-                            else if(property.Type == JTokenType.Float)
-                            {
-                                serialized += "\"" + property.Value<float>().ToString("F") + "\"";
-                            }
-                            else
-                            {
-                                serialized += "\"" + property.Value<string>() + "\"";
-                            }
-
+                        {    
+                            serialized += "\"" + property.Value<string>() + "\"";                            
                         }
                         if (property.Type == JTokenType.Array)
                         {
