@@ -34,7 +34,7 @@ namespace JsonHashing.WebApi.Controllers
 
         private readonly string DllLibPath = "eps2003csp11.dll";
 
-        private readonly string TokenPin = "your token pin";
+        private readonly string TokenPin = "23278181";
 
         public InvoiceHasher(Serializer serializer, Hasher hasher)
         {
@@ -119,7 +119,7 @@ namespace JsonHashing.WebApi.Controllers
                     if (foundCerts.Count == 0)
                         return "no device detected";
 
-                    var certForSigning = foundCerts[0];
+            var certForSigning = foundCerts[0];
                     store.Close();
 
                     
@@ -128,6 +128,7 @@ namespace JsonHashing.WebApi.Controllers
 
                     SignedCms cms = new SignedCms(content, true);
 
+                    
                     EssCertIDv2 bouncyCertificate = new EssCertIDv2(new Org.BouncyCastle.Asn1.X509.AlgorithmIdentifier(new DerObjectIdentifier("1.2.840.113549.1.9.16.2.47")), _hasher.HashBytes( certForSigning.RawData));
 
                     SigningCertificateV2 signerCertificateV2 = new SigningCertificateV2(new EssCertIDv2[] { bouncyCertificate });
@@ -142,14 +143,13 @@ namespace JsonHashing.WebApi.Controllers
                     signer.SignedAttributes.Add(new Pkcs9SigningTime(DateTime.UtcNow));
                     signer.SignedAttributes.Add(new AsnEncodedData(new Oid("1.2.840.113549.1.9.16.2.47"),  signerCertificateV2.GetEncoded()));
 
-
                     cms.ComputeSignature(signer);
 
                     var output = cms.Encode();
 
                     return Convert.ToBase64String(output);
                 }
-            }
+           }
         }
 
     }

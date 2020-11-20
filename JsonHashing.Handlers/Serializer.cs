@@ -4,6 +4,7 @@
  * asegypt@gmail.com
  * 01000592036
  */
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -41,9 +42,13 @@ namespace JsonHashing.Handlers
                         {
                             serialized += SerializeToken(property);
                         }
-                        if (property.Type == JTokenType.Boolean || property.Type == JTokenType.Integer || property.Type == JTokenType.Float || property.Type == JTokenType.String || property.Type == JTokenType.Date)
+                        if (property.Type == JTokenType.Boolean || property.Type == JTokenType.Integer || property.Type == JTokenType.Float  || property.Type == JTokenType.Date)
                         {    
                             serialized += "\"" + property.Value<string>() + "\"";                            
+                        }
+                        if(property.Type == JTokenType.String)
+                        {
+                            serialized += JsonConvert.ToString(property.Value<string>());
                         }
                         if (property.Type == JTokenType.Array)
                         {
