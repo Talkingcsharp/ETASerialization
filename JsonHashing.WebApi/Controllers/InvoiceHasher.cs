@@ -34,7 +34,7 @@ namespace JsonHashing.WebApi.Controllers
 
         private readonly string DllLibPath = "eps2003csp11.dll";
 
-        private readonly string TokenPin = "23278181";
+        private readonly string TokenPin = "pin";
 
         public InvoiceHasher(Serializer serializer, Hasher hasher)
         {
