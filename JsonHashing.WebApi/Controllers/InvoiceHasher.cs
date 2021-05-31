@@ -36,7 +36,7 @@ namespace JsonHashing.WebApi.Controllers
 
         private readonly string DllLibPath = "eps2003csp11.dll";
 
-        private readonly string TokenPin = "23278181";
+        private string TokenPin = "23278181";
 
         public InvoiceHasher(Serializer serializer, Hasher hasher, IConfiguration configuration)
         {
@@ -75,7 +75,66 @@ namespace JsonHashing.WebApi.Controllers
             };
         }
 
+        [HttpGet("[action]")]
+        public ActionResult GetAllTokenDetails()
+        {
+            Pkcs11InteropFactories factories = new Pkcs11InteropFactories();
+            List<ITokenInfo> tokens = new List<ITokenInfo>();
+            List<ISlotInfo> slots = new List<ISlotInfo>();
+            using (IPkcs11Library pkcs11Library = factories.Pkcs11LibraryFactory.LoadPkcs11Library(factories, DllLibPath, AppType.MultiThreaded))
+            {
+                var slotList = pkcs11Library.GetSlotList(SlotsType.WithTokenPresent).ToList();
+                slotList.ForEach(item =>
+                {
+                    tokens.Add(item.GetTokenInfo());
+                    slots.Add(item.GetSlotInfo());
+                });
 
+                return Ok(new
+                {
+                    tokens,
+                    slots
+                });
+            }
+        }
+        [HttpPost("[action]/{pin}")]
+        public async Task<ActionResult<string>> SignDocument([FromRoute] string pin)
+        {
+            this.TokenPin = pin;
+            using (StreamReader sr = new StreamReader(Request.Body))
+            {
+                
+
+                string requestbody = await sr.ReadToEndAsync();
+                JObject request = JsonConvert.DeserializeObject<JObject>(requestbody, new JsonSerializerSettings()
+                {
+                    FloatFormatHandling = FloatFormatHandling.String,
+                    FloatParseHandling = FloatParseHandling.Decimal,
+                    DateFormatHandling = DateFormatHandling.IsoDateFormat,
+                    DateParseHandling = DateParseHandling.None
+                });
+                var documents = request["documents"].ToObject<JArray>();
+
+                var document = documents.FirstOrDefault().ToObject<JObject>();
+                var serializedString = _serializer.Serialize(document);
+
+
+                var signatureString = SignWithCMS(Encoding.UTF8.GetBytes(serializedString));
+
+                var signatures = new List<ETASignature>();
+                signatures.Add(new ETASignature
+                {
+                    signatureType = "I",
+                    value = signatureString
+                });
+                document.Add("signatures", JArray.FromObject(signatures));
+                documents.Clear();
+                documents.Add(document);
+                request.Remove("documents");
+                request.Add("documents", documents);
+                return Ok(request.ToString());
+            }
+        }
         [HttpGet]
         public ActionResult GetAllCerts()
         {
@@ -170,6 +229,8 @@ namespace JsonHashing.WebApi.Controllers
                     return "No slots found";
                 }
 
+                var token = slot.GetTokenInfo();
+                var subfi = slot.GetSlotInfo();
 
                 using (var session = slot.OpenSession(SessionType.ReadWrite))
                 {
@@ -261,5 +322,12 @@ namespace JsonHashing.WebApi.Controllers
            
         }
 
+    }
+
+    class ETASignature
+    {
+        public string signatureType { get; set; }
+
+        public string value { get; set; }
     }
 }
