@@ -29,9 +29,6 @@ namespace JsonHashing.Handlers
             }
             else
             {
-
-
-
                 if (request.Type == JTokenType.Property)
                 {
                     string name = ((JProperty)request).Name.ToUpper();
@@ -42,11 +39,11 @@ namespace JsonHashing.Handlers
                         {
                             serialized += SerializeToken(property);
                         }
-                        if (property.Type == JTokenType.Boolean || property.Type == JTokenType.Integer || property.Type == JTokenType.Float  || property.Type == JTokenType.Date)
-                        {    
-                            serialized += "\"" + property.Value<string>() + "\"";                            
+                        if (property.Type == JTokenType.Boolean || property.Type == JTokenType.Integer || property.Type == JTokenType.Float || property.Type == JTokenType.Date)
+                        {
+                            serialized += "\"" + property.Value<string>() + "\"";
                         }
-                        if(property.Type == JTokenType.String)
+                        if (property.Type == JTokenType.String)
                         {
                             serialized += JsonConvert.ToString(property.Value<string>());
                         }
@@ -55,7 +52,14 @@ namespace JsonHashing.Handlers
                             foreach (var item in property.Children())
                             {
                                 serialized += "\"" + ((JProperty)request).Name.ToUpper() + "\"";
-                                serialized += SerializeToken(item);
+                                if (item.Type == JTokenType.String)
+                                {
+                                    serialized += JsonConvert.ToString(item.Value<string>());
+                                }
+                                else
+                                {
+                                    serialized += SerializeToken(item);
+                                }
                             }
                         }
                     }
@@ -65,14 +69,14 @@ namespace JsonHashing.Handlers
             {
                 foreach (var property in request.Children())
                 {
-                    
+
                     if (property.Type == JTokenType.Object || property.Type == JTokenType.Property)
                     {
                         serialized += SerializeToken(property);
                     }
                 }
             }
-            
+
             return serialized;
         }
     }
