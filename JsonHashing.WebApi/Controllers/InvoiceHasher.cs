@@ -36,13 +36,14 @@ namespace JsonHashing.WebApi.Controllers
 
         private readonly string DllLibPath = "eps2003csp11.dll";
 
-        private string TokenPin = "23278181";
+        private string TokenBin;
 
         public InvoiceHasher(Serializer serializer, Hasher hasher, IConfiguration configuration)
         {
             _serializer = serializer;
             _hasher = hasher;
             _configuration = configuration;
+            TokenBin = _configuration["TokenBin"];
         }
 
         [HttpPost("[action]")]
@@ -51,12 +52,12 @@ namespace JsonHashing.WebApi.Controllers
             using (StreamReader sr = new StreamReader(Request.Body))
             {
                 string requestbody = await sr.ReadToEndAsync();
-                JObject request = JsonConvert.DeserializeObject<JObject>(requestbody,new JsonSerializerSettings()
+                JObject request = JsonConvert.DeserializeObject<JObject>(requestbody, new JsonSerializerSettings()
                 {
-                      FloatFormatHandling = FloatFormatHandling.String,
-                       FloatParseHandling = FloatParseHandling.Decimal,
-                       DateFormatHandling= DateFormatHandling.IsoDateFormat,
-                        DateParseHandling = DateParseHandling.None
+                    FloatFormatHandling = FloatFormatHandling.String,
+                    FloatParseHandling = FloatParseHandling.Decimal,
+                    DateFormatHandling = DateFormatHandling.IsoDateFormat,
+                    DateParseHandling = DateParseHandling.None
                 });
                 var h = _serializer.Serialize(request);
                 return h;
@@ -100,10 +101,10 @@ namespace JsonHashing.WebApi.Controllers
         [HttpPost("[action]/{pin}")]
         public async Task<ActionResult<string>> SignDocument([FromRoute] string pin)
         {
-            this.TokenPin = pin;
+            this.TokenBin = pin;
             using (StreamReader sr = new StreamReader(Request.Body))
             {
-                
+
 
                 string requestbody = await sr.ReadToEndAsync();
                 JObject request = JsonConvert.DeserializeObject<JObject>(requestbody, new JsonSerializerSettings()
@@ -148,7 +149,7 @@ namespace JsonHashing.WebApi.Controllers
                     return Ok("No slots found");
                 }
 
-                
+
 
                 ITokenInfo tokenInfo = slot.GetTokenInfo();
 
@@ -156,9 +157,9 @@ namespace JsonHashing.WebApi.Controllers
 
                 using (var session = slot.OpenSession(SessionType.ReadWrite))
                 {
-                    session.Login(CKU.CKU_USER, Encoding.UTF8.GetBytes(TokenPin));
+                    session.Login(CKU.CKU_USER, Encoding.UTF8.GetBytes(TokenBin));
 
-                    
+
                     var certificateSearchAttributes = new List<IObjectAttribute>()
                     {
                         session.Factories.ObjectAttributeFactory.Create(CKA.CKA_CLASS, CKO.CKO_CERTIFICATE),
@@ -235,7 +236,7 @@ namespace JsonHashing.WebApi.Controllers
                 using (var session = slot.OpenSession(SessionType.ReadWrite))
                 {
 
-                    session.Login(CKU.CKU_USER, Encoding.UTF8.GetBytes(TokenPin));
+                    session.Login(CKU.CKU_USER, Encoding.UTF8.GetBytes(TokenBin));
 
                     var searchAttribute = new List<IObjectAttribute>()
                     {
@@ -319,7 +320,7 @@ namespace JsonHashing.WebApi.Controllers
                     return Convert.ToBase64String(output);
                 }
             }
-           
+
         }
 
     }
