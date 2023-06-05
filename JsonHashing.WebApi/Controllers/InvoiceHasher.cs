@@ -21,7 +21,11 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
+using System.Text.Json.Nodes;
+using JsonSerializer = System.Text.Json.JsonSerializer;
+
 
 namespace JsonHashing.WebApi.Controllers
 {
@@ -51,14 +55,8 @@ namespace JsonHashing.WebApi.Controllers
             using (StreamReader sr = new StreamReader(Request.Body))
             {
                 string requestbody = await sr.ReadToEndAsync();
-                JObject request = JsonConvert.DeserializeObject<JObject>(requestbody,new JsonSerializerSettings()
-                {
-                      FloatFormatHandling = FloatFormatHandling.String,
-                       FloatParseHandling = FloatParseHandling.Decimal,
-                       DateFormatHandling= DateFormatHandling.IsoDateFormat,
-                        DateParseHandling = DateParseHandling.None
-                });
-                var h = _serializer.Serialize(request);
+                var document = JsonDocument.Parse(requestbody);
+                var h = _serializer.Serialize(document);
                 return h;
             };
         }
@@ -103,36 +101,30 @@ namespace JsonHashing.WebApi.Controllers
             this.TokenPin = pin;
             using (StreamReader sr = new StreamReader(Request.Body))
             {
-                
-
                 string requestbody = await sr.ReadToEndAsync();
-                JObject request = JsonConvert.DeserializeObject<JObject>(requestbody, new JsonSerializerSettings()
-                {
-                    FloatFormatHandling = FloatFormatHandling.String,
-                    FloatParseHandling = FloatParseHandling.Decimal,
-                    DateFormatHandling = DateFormatHandling.IsoDateFormat,
-                    DateParseHandling = DateParseHandling.None
-                });
-                var documents = request["documents"].ToObject<JArray>();
-
-                var document = documents.FirstOrDefault().ToObject<JObject>();
+                var document = JsonDocument.Parse(requestbody);
+                var documentNode = JsonNode.Parse(requestbody);
                 var serializedString = _serializer.Serialize(document);
-
-
                 var signatureString = SignWithCMS(Encoding.UTF8.GetBytes(serializedString));
 
-                var signatures = new List<ETASignature>();
-                signatures.Add(new ETASignature
+                var signatures = new List<Dictionary<string, string>>();
+                signatures.Add(new Dictionary<string, string>()
                 {
-                    signatureType = "I",
-                    value = signatureString
+                    {"signatureType" , "I"},
+                    {"value" , signatureString}
                 });
-                document.Add("signatures", JArray.FromObject(signatures));
-                documents.Clear();
-                documents.Add(document);
-                request.Remove("documents");
-                request.Add("documents", documents);
-                return Ok(request.ToString());
+                
+                var serializerOption = new JsonSerializerOptions()
+                {
+                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                };
+
+                var signature = JsonSerializer.Serialize(signatures, serializerOption);
+                var signaturesNode =  JsonNode.Parse(signature);
+
+                documentNode.AsObject().Add("signatures",signaturesNode);
+                var signedRequest =  "{\"documents\":[" + JsonSerializer.Serialize(documentNode,serializerOption) + "]}";
+                return Ok(signedRequest);
             }
         }
         [HttpGet]
