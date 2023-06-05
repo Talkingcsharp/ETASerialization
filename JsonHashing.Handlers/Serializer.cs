@@ -10,74 +10,45 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 
 namespace JsonHashing.Handlers
 {
     public class Serializer
     {
-        public string Serialize(JObject request)
+        public string Serialize(JsonDocument document)
         {
-            return SerializeToken(request);
+            return SerializeToken(document.RootElement);
         }
 
-        private string SerializeToken(JToken request)
+        private string SerializeToken(JsonElement request, string? parentName = null)
         {
             string serialized = "";
-            if (request.Parent is null)
+            switch (request.ValueKind)
             {
-                SerializeToken(request.First);
-            }
-            else
-            {
-                if (request.Type == JTokenType.Property)
-                {
-                    string name = ((JProperty)request).Name.ToUpper();
-                    serialized += "\"" + name + "\"";
-                    foreach (var property in request)
+                case JsonValueKind.Object :
+                    foreach (var item in request.EnumerateObject())
                     {
-                        if (property.Type == JTokenType.Object)
-                        {
-                            serialized += SerializeToken(property);
-                        }
-                        if (property.Type == JTokenType.Boolean || property.Type == JTokenType.Integer || property.Type == JTokenType.Float || property.Type == JTokenType.Date)
-                        {
-                            serialized += "\"" + property.Value<string>() + "\"";
-                        }
-                        if (property.Type == JTokenType.String)
-                        {
-                            serialized += JsonConvert.ToString(property.Value<string>());
-                        }
-                        if (property.Type == JTokenType.Array)
-                        {
-                            foreach (var item in property.Children())
-                            {
-                                serialized += "\"" + ((JProperty)request).Name.ToUpper() + "\"";
-                                if (item.Type == JTokenType.String)
-                                {
-                                    serialized += JsonConvert.ToString(item.Value<string>());
-                                }
-                                else
-                                {
-                                    serialized += SerializeToken(item);
-                                }
-                            }
-                        }
+                        serialized += "\"" + item.Name.ToUpper() + "\"";
+                        serialized += SerializeToken(item.Value , item.Name.ToUpper());
                     }
-                }
-            }
-            if (request.Type == JTokenType.Object)
-            {
-                foreach (var property in request.Children())
-                {
-
-                    if (property.Type == JTokenType.Object || property.Type == JTokenType.Property)
+                    break;
+                case JsonValueKind.Array:
+                    foreach (var item in request.EnumerateArray())
                     {
-                        serialized += SerializeToken(property);
+                        serialized += "\"" + parentName + "\"";
+                        serialized += SerializeToken(item);
                     }
-                }
+                    break;
+                case JsonValueKind.Null:
+                case JsonValueKind.Undefined :
+                    throw new Exception($" error while serializing : {request}");
+                default:
+                    serialized += "\"" + request + "\"";
+                    break;
             }
-
             return serialized;
         }
+
     }
 }
