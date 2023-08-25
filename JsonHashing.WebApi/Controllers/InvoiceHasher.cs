@@ -98,14 +98,33 @@ namespace JsonHashing.WebApi.Controllers
                 });
             }
         }
+
+        [HttpPost("[action]")]
+        public async Task<ActionResult<string>> GetReceiptUUID()
+        {
+            using (StreamReader sr = new StreamReader(Request.Body))
+            {
+                string requestbody = await sr.ReadToEndAsync();
+                JObject request = JsonConvert.DeserializeObject<JObject>(requestbody, new JsonSerializerSettings()
+                {
+                    FloatFormatHandling = FloatFormatHandling.String,
+                    FloatParseHandling = FloatParseHandling.Decimal,
+                    DateFormatHandling = DateFormatHandling.IsoDateFormat,
+                    DateParseHandling = DateParseHandling.None
+                });
+                var serialized = _serializer.Serialize(request);
+                var hashed = _hasher.Hash(serialized);
+                var uuid = string.Join(string.Empty, Array.ConvertAll(hashed, b => b.ToString("x2")));
+                return uuid;
+            };
+        }
+
         [HttpPost("[action]/{pin}")]
         public async Task<ActionResult<string>> SignDocument([FromRoute] string pin)
         {
             this.TokenBin = pin;
             using (StreamReader sr = new StreamReader(Request.Body))
             {
-
-
                 string requestbody = await sr.ReadToEndAsync();
                 JObject request = JsonConvert.DeserializeObject<JObject>(requestbody, new JsonSerializerSettings()
                 {
@@ -247,7 +266,6 @@ namespace JsonHashing.WebApi.Controllers
 
                     IObjectHandle certificate = session.FindAllObjects(searchAttribute).FirstOrDefault();
 
-
                     if (certificate is null)
                     {
                         return "Certificate not found";
@@ -267,30 +285,12 @@ namespace JsonHashing.WebApi.Controllers
                         session.Factories.ObjectAttributeFactory.Create(CKA.CKA_KEY_TYPE,CKK.CKK_RSA)
                     };
 
-                    IObjectHandle privateKeyHandler = session.FindAllObjects(searchAttribute).FirstOrDefault();
+                    IObjectHandle privateKeyHandler = session.FindAllObjects(searchAttribute).LastOrDefault();
+
+                    
 
                     RSA privateKey = new TokenRSA(xcert, session, slot, privateKeyHandler);
-                    //privateKey.ImportRSAPublicKey(_cspBlob, out _);
-
-                    //searchAttribute = new List<IObjectAttribute>()
-                    //{
-                    //    session.Factories.ObjectAttributeFactory.Create(CKA.CKA_CLASS, CKO.CKO_PRIVATE_KEY),
-                    //    session.Factories.ObjectAttributeFactory.Create(CKA.CKA_KEY_TYPE,CKK.CKK_RSA)
-                    //};
-
-                    //IObjectHandle privateKeyHandler = session.FindAllObjects(searchAttribute).FirstOrDefault();
-
-                    //attributeValues = session.GetAttributeValue(privateKeyHandler, new List<CKA> { 
-                    //    CKA.CKA_VALUE 
-                    //});
-
-                    //RSA privateKey = RSA.Create();
-                    //privateKey.ImportRSAPrivateKey(attributeValues[0].GetValueAsByteArray(), out _);
-
-
-
-
-
+                    
                     ContentInfo content = new ContentInfo(new Oid("1.2.840.113549.1.7.5"), data);
 
 
@@ -299,15 +299,15 @@ namespace JsonHashing.WebApi.Controllers
 
                     EssCertIDv2 bouncyCertificate = new EssCertIDv2(new Org.BouncyCastle.Asn1.X509.AlgorithmIdentifier(new DerObjectIdentifier("1.2.840.113549.1.9.16.2.47")), _hasher.HashBytes(xcert.RawData));
 
-                    SigningCertificateV2 signerCertificateV2 = new SigningCertificateV2(new EssCertIDv2[] { bouncyCertificate });
+                    var x = bouncyCertificate.HashAlgorithm;
 
+                    SigningCertificateV2 signerCertificateV2 = new SigningCertificateV2(new EssCertIDv2[] { bouncyCertificate });
 
                     CmsSigner signer = new CmsSigner(xcert);
 
                     signer.PrivateKey = privateKey;
 
                     signer.DigestAlgorithm = new Oid("2.16.840.1.101.3.4.2.1");
-
 
 
                     signer.SignedAttributes.Add(new Pkcs9SigningTime(DateTime.UtcNow));
